@@ -1,0 +1,42 @@
+{
+    "timestamp": "2026-01-18 19:26:47.679106",
+    "platform": "Hyperledger Fabric",
+    "target_file": "contracts/fabric/VulnerableFabric.go",
+    "static_analysis": [
+        {
+            "tool": "Gosec",
+            "type": "G404",
+            "severity": "HIGH",
+            "description": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+            "location": "Line: 29"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "Determinism/BestPractice",
+            "severity": "CRITICAL",
+            "description": "Генерация случайных чисел нарушает консенсус (результат будет разным на пирах)",
+            "location": "Line: 6"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "Determinism/BestPractice",
+            "severity": "HIGH",
+            "description": "Использование time.Now() нарушает детерминизм (используйте stub.GetTxTimestamp)",
+            "location": "Line: 28"
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Go Test",
+            "description": "Unit-тесты пройдены",
+            "status": "PASS",
+            "evidence": "All tests passed"
+        }
+    ],
+    "summary": {
+        "critical": 1,
+        "high": 2,
+        "medium": 0,
+        "low": 0
+    }
+}

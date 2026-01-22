@@ -1,0 +1,71 @@
+name: SmartScan Security Check
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-analysis:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install System Dependencies (for Mythril)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev python3-dev
+
+    - name: Install Python Dependencies
+      run: |
+        # Устанавливаем всё из requirements.txt
+        pip install -r requirements.txt
+
+    - name: Install External Tools (Solc, Gosec, Echidna)
+      run: |
+        # Solidity
+        solc-select install 0.8.28
+        solc-select use 0.8.28
+        
+        # Go & Gosec
+        go install github.com/securego/gosec/v2/cmd/gosec@latest
+        export PATH=$PATH:$(go env GOPATH)/bin
+        
+        # Echidna
+        wget https://github.com/crytic/echidna/releases/tag/v2.3.0/echidna-2.3.0-x86_64-linux.tar.gz
+        tar -xf echidna-2.2.3-Linux.tar.gz
+        sudo mv echidna /usr/local/bin/
+
+    - name: Run Ethereum Analysis
+      continue-on-error: true 
+      run: |
+        # Проверяем наличие .sol файлов
+        if compgen -G "contracts/eth/*.sol" > /dev/null; then
+          for file in contracts/eth/*.sol; do
+             python3 smartScan.py "$file" --html
+          done
+        fi
+
+    - name: Run Fabric Analysis
+      continue-on-error: true
+      run: |
+        # Проверяем наличие .go файлов
+        if compgen -G "contracts/fabric/*.go" > /dev/null; then
+          for file in contracts/fabric/*.go; do
+             python3 smartScan.py "$file" --html
+          done
+        fi
+
+    - name: Upload Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: reports/
