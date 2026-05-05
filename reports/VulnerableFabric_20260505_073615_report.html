@@ -1,0 +1,117 @@
+
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>SmartScan Report</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f9; }
+                .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+                .issue { border-left: 5px solid #ccc; padding: 10px 15px; margin: 10px 0; background: #fff; }
+                .high { border-left-color: #e74c3c; }
+                .medium { border-left-color: #f39c12; }
+                .low { border-left-color: #3498db; }
+                .pass { color: #27ae60; font-weight: bold; }
+                .fail { color: #c0392b; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+                pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Отчет анализа безопасности</h1>
+                <p>Файл: <b>/vagrant/contracts/fabric/VulnerableFabric.go</b> | Платформа: Hyperledger Fabric</p>
+                <p>Дата сканирования: 2026-05-05 07:35:51</p>
+            </div>
+
+            <div class="card">
+                <h2>Сводка уязвимостей</h2>
+                <table>
+                    <tr>
+                        <th>Высокий риск</th><th>Средний риск</th><th>Низкий риск</th>
+                    </tr>
+                    <tr>
+                        <td style="color:#e74c3c; font-size: 24px; font-weight: bold;">7</td>
+                        <td style="color:#f39c12; font-size: 24px; font-weight: bold;">0</td>
+                        <td style="color:#3498db; font-size: 24px; font-weight: bold;">0</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Результаты статического анализа (SAST)</h2>
+                
+                
+                <div class="issue high">
+                    <b>G404</b> (Gosec)<br>
+                    <small>Line: 29</small><br>
+                    Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)
+                </div>
+                
+                <div class="issue high">
+                    <b>NonDeterminism/TimeNow</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 28</small><br>
+                    Использование time.Now() нарушает детерминизм. Используйте stub.GetTxTimestamp()
+                </div>
+                
+                <div class="issue critical">
+                    <b>NonDeterminism/MathRand</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 28</small><br>
+                    Использование math/rand нарушает консенсус между пирами (недетерминизм)
+                </div>
+                
+                <div class="issue critical">
+                    <b>NonDeterminism/MathRand</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 29</small><br>
+                    Использование math/rand нарушает консенсус между пирами (недетерминизм)
+                </div>
+                
+                <div class="issue high">
+                    <b>AccessControl/MissingCheck</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 25</small><br>
+                    Метод CreateRiskyAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.
+                </div>
+                
+                <div class="issue high">
+                    <b>ErrorHandling/IgnoredPutState</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 41</small><br>
+                    Результат PutState не присваивается переменной — ошибка записи будет проигнорирована
+                </div>
+                
+                <div class="issue high">
+                    <b>ErrorHandling/IgnoredPutState</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 47</small><br>
+                    Результат PutState не присваивается переменной — ошибка записи будет проигнорирована
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2>Результаты динамического анализа (DAST)</h2>
+                
+                <div class="issue">
+                    <b>Fabric-CCKit</b>: <span class="fail">FAIL</span><br>
+                    <i>Обнаружена уязвимость</i>
+                    <pre>    smartscan_cckit_test.go:26: ACCESS CONTROL FAIL: CreateRiskyAsset выполнился без авторизации (статус 200). Любой участник сети может вызвать этот метод.
+--- FAIL: TestCCKit_AccessControl (0.00s)
+FAIL
+FAIL	smartscan/sandbox	0.017s</pre>
+                </div>
+                
+                <div class="issue">
+                    <b>Fabric-Fuzzing/Seed</b>: <span class="pass">PASS</span><br>
+                    <i>Успешно завершено</i>
+                    <pre>No issues detected.</pre>
+                </div>
+                
+                <div class="issue">
+                    <b>Fabric-Fuzzing</b>: <span class="pass">PASS</span><br>
+                    <i>Успешно завершено</i>
+                    <pre>No issues detected.</pre>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        

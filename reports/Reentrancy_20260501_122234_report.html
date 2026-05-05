@@ -1,0 +1,120 @@
+
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>SmartScan Report</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f9; }
+                .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+                .issue { border-left: 5px solid #ccc; padding: 10px 15px; margin: 10px 0; background: #fff; }
+                .high { border-left-color: #e74c3c; }
+                .medium { border-left-color: #f39c12; }
+                .low { border-left-color: #3498db; }
+                .pass { color: #27ae60; font-weight: bold; }
+                .fail { color: #c0392b; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+                pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Отчет анализа безопасности</h1>
+                <p>Файл: <b>/vagrant/contracts/eth/Reentrancy.sol</b> | Платформа: Ethereum</p>
+                <p>Дата сканирования: 2026-05-01 12:22:22</p>
+            </div>
+
+            <div class="card">
+                <h2>Сводка уязвимостей</h2>
+                <table>
+                    <tr>
+                        <th>Высокий риск</th><th>Средний риск</th><th>Низкий риск</th>
+                    </tr>
+                    <tr>
+                        <td style="color:#e74c3c; font-size: 24px; font-weight: bold;">1</td>
+                        <td style="color:#f39c12; font-size: 24px; font-weight: bold;">2</td>
+                        <td style="color:#3498db; font-size: 24px; font-weight: bold;">1</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Результаты статического анализа (SAST)</h2>
+                
+                
+                <div class="issue high">
+                    <b>reentrancy-eth</b> (Slither)<br>
+                    <small></small><br>
+                    Reentrancy in Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20):
+	External calls:
+	- (sent) = msg.sender.call{value: bal}() (contracts/eth/Reentrancy.sol#16)
+	State variables written after the call(s):
+	- balances[msg.sender] = 0 (contracts/eth/Reentrancy.sol#19)
+	Reentrancy.balances (contracts/eth/Reentrancy.sol#5) can be used in cross function reentrancies:
+	- Reentrancy.balances (contracts/eth/Reentrancy.sol#5)
+	- Reentrancy.deposit() (contracts/eth/Reentrancy.sol#7-9)
+	- Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20)
+
+                </div>
+                
+                <div class="issue informational">
+                    <b>solc-version</b> (Slither)<br>
+                    <small></small><br>
+                    Pragma version^0.8.28 (contracts/eth/Reentrancy.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.16
+
+                </div>
+                
+                <div class="issue informational">
+                    <b>solc-version</b> (Slither)<br>
+                    <small></small><br>
+                    solc-0.8.28 is not recommended for deployment
+
+                </div>
+                
+                <div class="issue informational">
+                    <b>low-level-calls</b> (Slither)<br>
+                    <small></small><br>
+                    Low level call in Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20):
+	- (sent) = msg.sender.call{value: bal}() (contracts/eth/Reentrancy.sol#16)
+
+                </div>
+                
+                <div class="issue low">
+                    <b>External Call To User-Supplied Address</b> (Mythril)<br>
+                    <small></small><br>
+                    A call to a user-supplied address is executed.
+An external message call to an address specified by the caller is executed. Note that the callee account might contain arbitrary code and could re-enter any function within this contract. Reentering the contract in an intermediate state may lead to unexpected behaviour. Make sure that no state modifications are executed after this call and/or reentrancy guards are in place.
+                </div>
+                
+                <div class="issue medium">
+                    <b>Transaction Order Dependence</b> (Mythril)<br>
+                    <small></small><br>
+                    The value of the call is dependent on balance or storage write
+This can lead to race conditions. An attacker may be able to run a transaction after our transaction which can change the value of the call
+                </div>
+                
+                <div class="issue medium">
+                    <b>State access after external call</b> (Mythril)<br>
+                    <small></small><br>
+                    Write to persistent state following external call
+The contract account state is accessed after an external call to a user defined address. To prevent reentrancy issues, consider accessing the state only before the call, especially if the callee is untrusted. Alternatively, a reentrancy lock can be used to prevent untrusted callees from re-entering the contract in an intermediate state.
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2>Результаты динамического анализа (DAST)</h2>
+                
+                <div class="issue">
+                    <b>Echidna</b>: <span class="fail">FAIL</span><br>
+                    <i>Нарушение инварианта</i>
+                    <pre>Call sequence:
+GeneratedAutoTest.depositAuto() Value: 0x1
+    GeneratedAutoTest.withdraw()</pre>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        

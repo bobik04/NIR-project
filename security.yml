@@ -6,66 +6,153 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  SOLC_VERSION: "0.8.28"
+  ECHIDNA_VERSION: "2.3.2"
+  GOSEC_VERSION: "v2.20.0"
+  GO_VERSION: "1.21.5"
+
 jobs:
-  security-analysis:
+  # Быстрая проверка на каждый PR (только SAST, секунды)
+  sast-fast:
+    name: "SAST (fast)"
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Install System Dependencies (for Mythril)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libssl-dev python3-dev
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
-    - name: Install Python Dependencies
-      run: |
-        # Устанавливаем всё из requirements.txt
-        pip install -r requirements.txt
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev python3-dev
 
-    - name: Install External Tools (Solc, Gosec, Echidna)
-      run: |
-        # Solidity
-        solc-select install 0.8.28
-        solc-select use 0.8.28
-        
-        # Go & Gosec
-        go install github.com/securego/gosec/v2/cmd/gosec@latest
-        export PATH=$PATH:$(go env GOPATH)/bin
-        
-        # Echidna
-        wget https://github.com/crytic/echidna/releases/tag/v2.3.0/echidna-2.3.0-x86_64-linux.tar.gz
-        tar -xf echidna-2.2.3-Linux.tar.gz
-        sudo mv echidna /usr/local/bin/
+      - name: Install Python dependencies
+        run: |
+          pip install z3-solver==4.12.1.0
+          pip install -r requirements.txt
 
-    - name: Run Ethereum Analysis
-      continue-on-error: true 
-      run: |
-        # Проверяем наличие .sol файлов
-        if compgen -G "contracts/eth/*.sol" > /dev/null; then
-          for file in contracts/eth/*.sol; do
-             python3 smartScan.py "$file" --html
-          done
-        fi
+      - name: Install Gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@${{ env.GOSEC_VERSION }}
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-    - name: Run Fabric Analysis
-      continue-on-error: true
-      run: |
-        # Проверяем наличие .go файлов
-        if compgen -G "contracts/fabric/*.go" > /dev/null; then
-          for file in contracts/fabric/*.go; do
-             python3 smartScan.py "$file" --html
-          done
-        fi
+      - name: Install solc-select + compiler
+        run: |
+          solc-select install ${{ env.SOLC_VERSION }}
+          solc-select use ${{ env.SOLC_VERSION }}
 
-    - name: Upload Reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: security-reports
-        path: reports/
+      - name: Scan Ethereum contracts (fast)
+        continue-on-error: true
+        run: |
+          if compgen -G "contracts/eth/*.sol" > /dev/null 2>&1; then
+            for file in contracts/eth/*.sol; do
+              echo "--- Scanning $file ---"
+              python3 smartScan.py "$file" --profile fast
+            done
+          else
+            echo "No .sol files found, skipping."
+          fi
+
+      - name: Scan Fabric contracts (fast)
+        continue-on-error: true
+        run: |
+          if compgen -G "contracts/fabric/*.go" > /dev/null 2>&1; then
+            for file in contracts/fabric/*.go; do
+              echo "--- Scanning $file ---"
+              python3 smartScan.py "$file" --profile fast
+            done
+          else
+            echo "No .go files found, skipping."
+          fi
+
+      - name: Upload SAST reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+
+  # Полный аудит при мерже в main (SAST + DAST + Fuzz)
+  dast-audit:
+    name: "Full Audit (deep)"
+    runs-on: ubuntu-latest
+    # Запускаем только при пуше в main, не на каждый PR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev python3-dev wget
+
+      - name: Install Python dependencies
+        run: |
+          pip install z3-solver==4.12.1.0
+          pip install -r requirements.txt
+
+      - name: Install Gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@${{ env.GOSEC_VERSION }}
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Pre-cache Fabric Go modules
+        run: |
+          mkdir -p /tmp/fabric-cache && cd /tmp/fabric-cache
+          go mod init dummycache
+          go get github.com/hyperledger/fabric-contract-api-go/contractapi@latest
+          go get github.com/hyperledger/fabric-chaincode-go/shimtest@latest
+          go mod tidy
+          cd / && rm -rf /tmp/fabric-cache
+
+      - name: Install solc + Echidna
+        run: |
+          solc-select install ${{ env.SOLC_VERSION }}
+          solc-select use ${{ env.SOLC_VERSION }}
+          # Echidna — корректный URL с /download/ (не /tag/)
+          wget -q https://github.com/crytic/echidna/releases/download/v${{ env.ECHIDNA_VERSION }}/echidna-${{ env.ECHIDNA_VERSION }}-x86_64-linux.tar.gz \
+            -O /tmp/echidna.tar.gz
+          tar -xzf /tmp/echidna.tar.gz -C /usr/local/bin
+          chmod +x /usr/local/bin/echidna
+
+      - name: Scan Ethereum contracts (deep)
+        continue-on-error: true
+        run: |
+          if compgen -G "contracts/eth/*.sol" > /dev/null 2>&1; then
+            for file in contracts/eth/*.sol; do
+              echo "--- Scanning $file ---"
+              python3 smartScan.py "$file" --profile deep --html
+            done
+          fi
+
+      - name: Scan Fabric contracts (audit)
+        continue-on-error: true
+        run: |
+          if compgen -G "contracts/fabric/*.go" > /dev/null 2>&1; then
+            for file in contracts/fabric/*.go; do
+              echo "--- Scanning $file ---"
+              python3 smartScan.py "$file" --profile audit --html
+            done
+          fi
+
+      - name: Upload full audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 90

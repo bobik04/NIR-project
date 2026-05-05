@@ -1,0 +1,120 @@
+
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>SmartScan Report</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f9; }
+                .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+                .issue { border-left: 5px solid #ccc; padding: 10px 15px; margin: 10px 0; background: #fff; }
+                .high { border-left-color: #e74c3c; }
+                .medium { border-left-color: #f39c12; }
+                .low { border-left-color: #3498db; }
+                .pass { color: #27ae60; font-weight: bold; }
+                .fail { color: #c0392b; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+                pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Отчет анализа безопасности</h1>
+                <p>Файл: <b>/vagrant/contracts/fabric/asset_transfer.go</b> | Платформа: Hyperledger Fabric</p>
+                <p>Дата сканирования: 2026-05-01 12:23:26</p>
+            </div>
+
+            <div class="card">
+                <h2>Сводка уязвимостей</h2>
+                <table>
+                    <tr>
+                        <th>Высокий риск</th><th>Средний риск</th><th>Низкий риск</th>
+                    </tr>
+                    <tr>
+                        <td style="color:#e74c3c; font-size: 24px; font-weight: bold;">3</td>
+                        <td style="color:#f39c12; font-size: 24px; font-weight: bold;">1</td>
+                        <td style="color:#3498db; font-size: 24px; font-weight: bold;">4</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Результаты статического анализа (SAST)</h2>
+                
+                
+                <div class="issue low">
+                    <b>G104</b> (Gosec)<br>
+                    <small>Line: 161</small><br>
+                    Errors unhandled
+                </div>
+                
+                <div class="issue low">
+                    <b>G104</b> (Gosec)<br>
+                    <small>Line: 158</small><br>
+                    Errors unhandled
+                </div>
+                
+                <div class="issue low">
+                    <b>G104</b> (Gosec)<br>
+                    <small>Line: 101</small><br>
+                    Errors unhandled
+                </div>
+                
+                <div class="issue low">
+                    <b>G104</b> (Gosec)<br>
+                    <small>Line: 98</small><br>
+                    Errors unhandled
+                </div>
+                
+                <div class="issue medium">
+                    <b>NonDeterminism/RichQuery</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 209</small><br>
+                    Rich-query / Range-query возвращают разные результаты на разных пирах в зависимости от состояния БД — потенциальный недетерминизм при записи на основе результата
+                </div>
+                
+                <div class="issue high">
+                    <b>AccessControl/MissingCheck</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 77</small><br>
+                    Метод CreateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.
+                </div>
+                
+                <div class="issue high">
+                    <b>AccessControl/MissingCheck</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 142</small><br>
+                    Метод UpdateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.
+                </div>
+                
+                <div class="issue high">
+                    <b>AccessControl/MissingCheck</b> (ChaincodeAnalyzer)<br>
+                    <small>Line: 185</small><br>
+                    Метод DeleteAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2>Результаты динамического анализа (DAST)</h2>
+                
+                <div class="issue">
+                    <b>Fabric-CCKit</b>: <span class="pass">PASS</span><br>
+                    <i>Timeout</i>
+                    <pre>Завершено по таймауту без краша.</pre>
+                </div>
+                
+                <div class="issue">
+                    <b>Fabric-Fuzzing/Seed</b>: <span class="pass">PASS</span><br>
+                    <i>Timeout</i>
+                    <pre>Завершено по таймауту без краша.</pre>
+                </div>
+                
+                <div class="issue">
+                    <b>Fabric-Fuzzing</b>: <span class="pass">PASS</span><br>
+                    <i>Timeout</i>
+                    <pre>Завершено по таймауту без краша.</pre>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        

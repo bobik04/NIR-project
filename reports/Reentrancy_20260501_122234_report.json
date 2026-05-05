@@ -1,0 +1,70 @@
+{
+    "timestamp": "2026-05-01 12:22:22",
+    "platform": "Ethereum",
+    "target_file": "/vagrant/contracts/eth/Reentrancy.sol",
+    "static_analysis": [
+        {
+            "tool": "Slither",
+            "type": "reentrancy-eth",
+            "severity": "High",
+            "description": "Reentrancy in Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20):\n\tExternal calls:\n\t- (sent) = msg.sender.call{value: bal}() (contracts/eth/Reentrancy.sol#16)\n\tState variables written after the call(s):\n\t- balances[msg.sender] = 0 (contracts/eth/Reentrancy.sol#19)\n\tReentrancy.balances (contracts/eth/Reentrancy.sol#5) can be used in cross function reentrancies:\n\t- Reentrancy.balances (contracts/eth/Reentrancy.sol#5)\n\t- Reentrancy.deposit() (contracts/eth/Reentrancy.sol#7-9)\n\t- Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20)\n",
+            "location": ""
+        },
+        {
+            "tool": "Slither",
+            "type": "solc-version",
+            "severity": "Informational",
+            "description": "Pragma version^0.8.28 (contracts/eth/Reentrancy.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.16\n",
+            "location": ""
+        },
+        {
+            "tool": "Slither",
+            "type": "solc-version",
+            "severity": "Informational",
+            "description": "solc-0.8.28 is not recommended for deployment\n",
+            "location": ""
+        },
+        {
+            "tool": "Slither",
+            "type": "low-level-calls",
+            "severity": "Informational",
+            "description": "Low level call in Reentrancy.withdraw() (contracts/eth/Reentrancy.sol#11-20):\n\t- (sent) = msg.sender.call{value: bal}() (contracts/eth/Reentrancy.sol#16)\n",
+            "location": ""
+        },
+        {
+            "tool": "Mythril",
+            "type": "External Call To User-Supplied Address",
+            "severity": "Low",
+            "description": "A call to a user-supplied address is executed.\nAn external message call to an address specified by the caller is executed. Note that the callee account might contain arbitrary code and could re-enter any function within this contract. Reentering the contract in an intermediate state may lead to unexpected behaviour. Make sure that no state modifications are executed after this call and/or reentrancy guards are in place.",
+            "location": ""
+        },
+        {
+            "tool": "Mythril",
+            "type": "Transaction Order Dependence",
+            "severity": "Medium",
+            "description": "The value of the call is dependent on balance or storage write\nThis can lead to race conditions. An attacker may be able to run a transaction after our transaction which can change the value of the call",
+            "location": ""
+        },
+        {
+            "tool": "Mythril",
+            "type": "State access after external call",
+            "severity": "Medium",
+            "description": "Write to persistent state following external call\nThe contract account state is accessed after an external call to a user defined address. To prevent reentrancy issues, consider accessing the state only before the call, especially if the callee is untrusted. Alternatively, a reentrancy lock can be used to prevent untrusted callees from re-entering the contract in an intermediate state.",
+            "location": ""
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Echidna",
+            "description": "Нарушение инварианта",
+            "status": "FAIL",
+            "evidence": "Call sequence:\nGeneratedAutoTest.depositAuto() Value: 0x1\n    GeneratedAutoTest.withdraw()"
+        }
+    ],
+    "summary": {
+        "critical": 0,
+        "high": 1,
+        "medium": 2,
+        "low": 1
+    }
+}

@@ -1,0 +1,89 @@
+
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>SmartScan Report</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f9; }
+                .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+                .issue { border-left: 5px solid #ccc; padding: 10px 15px; margin: 10px 0; background: #fff; }
+                .high { border-left-color: #e74c3c; }
+                .medium { border-left-color: #f39c12; }
+                .low { border-left-color: #3498db; }
+                .pass { color: #27ae60; font-weight: bold; }
+                .fail { color: #c0392b; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+                pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Отчет анализа безопасности</h1>
+                <p>Файл: <b>/vagrant/contracts/eth/SecureVault.sol</b> | Платформа: Ethereum</p>
+                <p>Дата сканирования: 2026-05-01 12:16:24</p>
+            </div>
+
+            <div class="card">
+                <h2>Сводка уязвимостей</h2>
+                <table>
+                    <tr>
+                        <th>Высокий риск</th><th>Средний риск</th><th>Низкий риск</th>
+                    </tr>
+                    <tr>
+                        <td style="color:#e74c3c; font-size: 24px; font-weight: bold;">0</td>
+                        <td style="color:#f39c12; font-size: 24px; font-weight: bold;">0</td>
+                        <td style="color:#3498db; font-size: 24px; font-weight: bold;">1</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Результаты статического анализа (SAST)</h2>
+                
+                
+                <div class="issue informational">
+                    <b>solc-version</b> (Slither)<br>
+                    <small></small><br>
+                    solc-0.8.28 is not recommended for deployment
+
+                </div>
+                
+                <div class="issue informational">
+                    <b>solc-version</b> (Slither)<br>
+                    <small></small><br>
+                    Pragma version^0.8.28 (contracts/eth/SecureVault.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.16
+
+                </div>
+                
+                <div class="issue informational">
+                    <b>low-level-calls</b> (Slither)<br>
+                    <small></small><br>
+                    Low level call in SecureVault.withdraw(uint256) (contracts/eth/SecureVault.sol#36-50):
+	- (success) = msg.sender.call{value: amount}() (contracts/eth/SecureVault.sol#48)
+
+                </div>
+                
+                <div class="issue low">
+                    <b>External Call To User-Supplied Address</b> (Mythril)<br>
+                    <small></small><br>
+                    A call to a user-supplied address is executed.
+An external message call to an address specified by the caller is executed. Note that the callee account might contain arbitrary code and could re-enter any function within this contract. Reentering the contract in an intermediate state may lead to unexpected behaviour. Make sure that no state modifications are executed after this call and/or reentrancy guards are in place.
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2>Результаты динамического анализа (DAST)</h2>
+                
+                <div class="issue">
+                    <b>Echidna</b>: <span class="pass">PASS</span><br>
+                    <i>Инварианты соблюдены</i>
+                    <pre>Tests passed</pre>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        

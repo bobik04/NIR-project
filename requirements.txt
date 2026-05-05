@@ -1,6 +1,10 @@
-docker>=6.0.0
-web3>=6.0.0
-py-solc-x>=2.0.0
-slither-analyzer>=0.11.0
-solc-select>=0.3.0
-mythril>=0.24.0
+# SmartScan — зависимости Python
+# Внутри venv: pip install -r requirements.txt
+
+# --- Ethereum SAST ---
+slither-analyzer>=0.11.0       # Статический анализатор Solidity
+solc-select>=1.0.4             # Менеджер версий компилятора Solidity
+
+# --- Ethereum символьный анализ ---
+z3-solver==4.12.1.0
+mythril>=0.24.7

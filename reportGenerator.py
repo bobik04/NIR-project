@@ -4,13 +4,12 @@ from datetime import datetime
 
 class ReportGenerator:
     def __init__(self):
-        # Автоматическое создание папки reports
         self.reports_dir = os.path.abspath("reports")
         if not os.path.exists(self.reports_dir):
             os.makedirs(self.reports_dir)
             
         self.data = {
-            "timestamp": str(datetime.now()),
+            "timestamp": str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
             "platform": "unknown",
             "target_file": "",
             "static_analysis": [],
@@ -30,9 +29,11 @@ class ReportGenerator:
             "description": description,
             "location": location
         })
-        sev_key = severity.lower()
-        if sev_key in self.data["summary"]:
-            self.data["summary"][sev_key] += 1
+        sev = severity.lower()
+        if sev in self.data["summary"]:
+            self.data["summary"][sev] += 1
+        elif sev == "error" or sev == "high": # Маппинг для разных инструментов
+            self.data["summary"]["high"] += 1
 
     def add_dynamic_issue(self, tool, description, status, evidence=""):
         self.data["dynamic_analysis"].append({
@@ -41,8 +42,6 @@ class ReportGenerator:
             "status": status,
             "evidence": evidence
         })
-        if status == "FAIL":
-            self.data["summary"]["critical"] += 1
 
     def _get_report_path(self, ext):
         filename = os.path.basename(self.data["target_file"])
@@ -50,54 +49,83 @@ class ReportGenerator:
         name = os.path.splitext(filename)[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return os.path.join(self.reports_dir, f"{name}_{timestamp}_report.{ext}")
-
+    
     def save_json(self):
-        output_path = self._get_report_path("json")
-        with open(output_path, "w", encoding="utf-8") as f:
+        path = self._get_report_path("json")
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
-        print(f"[+] Отчет сохранен автоматически: {output_path}")
+        return path
 
     def save_html(self):
-        output_path = self._get_report_path("html")
-        html = f"""
+        path = self._get_report_path("html")
+        
+        # Цветовая схема для отчета
+        html_content = f"""
         <html>
         <head>
-            <title>SmartScan Report - {self.data['target_file']}</title>
+            <meta charset="UTF-8">
+            <title>SmartScan Report</title>
             <style>
-                body {{ font-family: sans-serif; padding: 20px; background: #f0f2f5; }}
-                .container {{ background: white; padding: 30px; border-radius: 8px; max-width: 900px; margin: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
-                h1 {{ color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }}
-                .summary {{ display: flex; gap: 20px; margin-bottom: 30px; }}
-                .card {{ padding: 15px; background: #fafafa; border: 1px solid #eee; border-radius: 5px; flex: 1; text-align: center; }}
-                .high {{ color: #d9534f; font-weight: bold; }}
-                .medium {{ color: #f0ad4e; font-weight: bold; }}
-                .issue {{ border-left: 4px solid #ddd; padding: 10px 15px; margin-bottom: 10px; background: #fff; border: 1px solid #eee; }}
-                .issue.High {{ border-left-color: #d9534f; }}
-                .issue.Medium {{ border-left-color: #f0ad4e; }}
-                .fail {{ background-color: #fff5f5; border-left: 4px solid #d9534f; }}
-                pre {{ background: #f8f9fa; padding: 10px; overflow-x: auto; font-size: 0.9em; }}
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f9; }}
+                .header {{ background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
+                .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+                .issue {{ border-left: 5px solid #ccc; padding: 10px 15px; margin: 10px 0; background: #fff; }}
+                .high {{ border-left-color: #e74c3c; }}
+                .medium {{ border-left-color: #f39c12; }}
+                .low {{ border-left-color: #3498db; }}
+                .pass {{ color: #27ae60; font-weight: bold; }}
+                .fail {{ color: #c0392b; font-weight: bold; }}
+                table {{ width: 100%; border-collapse: collapse; }}
+                th, td {{ text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }}
+                pre {{ background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }}
             </style>
         </head>
         <body>
-            <div class="container">
-                <h1>Отчет безопасности: {os.path.basename(self.data['target_file'])}</h1>
-                <p>Платформа: <b>{self.data['platform']}</b> | Дата: {self.data['timestamp']}</p>
-                
-                <div class="summary">
-                    <div class="card">Critical: <span class="high">{self.data['summary']['critical']}</span></div>
-                    <div class="card">High: <span class="high">{self.data['summary']['high']}</span></div>
-                    <div class="card">Medium: <span class="medium">{self.data['summary']['medium']}</span></div>
-                </div>
+            <div class="header">
+                <h1>Отчет анализа безопасности</h1>
+                <p>Файл: <b>{self.data['target_file']}</b> | Платформа: {self.data['platform']}</p>
+                <p>Дата сканирования: {self.data['timestamp']}</p>
+            </div>
 
-                <h2>Статический анализ</h2>
-                {''.join([f'<div class="issue {i["severity"]}"><b>[{i["severity"]}] {i["type"]}</b><br>{i["description"]}</div>' for i in self.data['static_analysis']])}
-                
-                <h2>Динамический анализ</h2>
-                {''.join([f'<div class="issue { "fail" if i["status"] == "FAIL" else "" }"><b>{i["tool"]}</b>: {i["status"]}<br>{i["description"]}<br><pre>{i["evidence"]}</pre></div>' for i in self.data['dynamic_analysis']])}
+            <div class="card">
+                <h2>Сводка уязвимостей</h2>
+                <table>
+                    <tr>
+                        <th>Высокий риск</th><th>Средний риск</th><th>Низкий риск</th>
+                    </tr>
+                    <tr>
+                        <td style="color:#e74c3c; font-size: 24px; font-weight: bold;">{self.data['summary']['high'] + self.data['summary']['critical']}</td>
+                        <td style="color:#f39c12; font-size: 24px; font-weight: bold;">{self.data['summary']['medium']}</td>
+                        <td style="color:#3498db; font-size: 24px; font-weight: bold;">{self.data['summary']['low']}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Результаты статического анализа (SAST)</h2>
+                {"<p>Уязвимостей не найдено.</p>" if not self.data['static_analysis'] else ""}
+                {"".join([f'''
+                <div class="issue {item['severity'].lower()}">
+                    <b>{item['type']}</b> ({item['tool']})<br>
+                    <small>{item['location']}</small><br>
+                    {item['description']}
+                </div>
+                ''' for item in self.data['static_analysis']])}
+            </div>
+
+            <div class="card">
+                <h2>Результаты динамического анализа (DAST)</h2>
+                {"".join([f'''
+                <div class="issue">
+                    <b>{item['tool']}</b>: <span class="{item['status'].lower()}">{item['status']}</span><br>
+                    <i>{item['description']}</i>
+                    <pre>{item['evidence']}</pre>
+                </div>
+                ''' for item in self.data['dynamic_analysis']])}
             </div>
         </body>
         </html>
         """
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"[+] HTML отчет сохранен: {output_path}")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        return path

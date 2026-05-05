@@ -1,0 +1,49 @@
+{
+    "timestamp": "2026-05-01 12:16:24",
+    "platform": "Ethereum",
+    "target_file": "/vagrant/contracts/eth/SecureVault.sol",
+    "static_analysis": [
+        {
+            "tool": "Slither",
+            "type": "solc-version",
+            "severity": "Informational",
+            "description": "solc-0.8.28 is not recommended for deployment\n",
+            "location": ""
+        },
+        {
+            "tool": "Slither",
+            "type": "solc-version",
+            "severity": "Informational",
+            "description": "Pragma version^0.8.28 (contracts/eth/SecureVault.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.16\n",
+            "location": ""
+        },
+        {
+            "tool": "Slither",
+            "type": "low-level-calls",
+            "severity": "Informational",
+            "description": "Low level call in SecureVault.withdraw(uint256) (contracts/eth/SecureVault.sol#36-50):\n\t- (success) = msg.sender.call{value: amount}() (contracts/eth/SecureVault.sol#48)\n",
+            "location": ""
+        },
+        {
+            "tool": "Mythril",
+            "type": "External Call To User-Supplied Address",
+            "severity": "Low",
+            "description": "A call to a user-supplied address is executed.\nAn external message call to an address specified by the caller is executed. Note that the callee account might contain arbitrary code and could re-enter any function within this contract. Reentering the contract in an intermediate state may lead to unexpected behaviour. Make sure that no state modifications are executed after this call and/or reentrancy guards are in place.",
+            "location": ""
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Echidna",
+            "description": "Инварианты соблюдены",
+            "status": "PASS",
+            "evidence": "Tests passed"
+        }
+    ],
+    "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 1
+    }
+}

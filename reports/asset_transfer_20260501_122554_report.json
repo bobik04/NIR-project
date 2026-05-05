@@ -1,0 +1,89 @@
+{
+    "timestamp": "2026-05-01 12:23:26",
+    "platform": "Hyperledger Fabric",
+    "target_file": "/vagrant/contracts/fabric/asset_transfer.go",
+    "static_analysis": [
+        {
+            "tool": "Gosec",
+            "type": "G104",
+            "severity": "LOW",
+            "description": "Errors unhandled",
+            "location": "Line: 161"
+        },
+        {
+            "tool": "Gosec",
+            "type": "G104",
+            "severity": "LOW",
+            "description": "Errors unhandled",
+            "location": "Line: 158"
+        },
+        {
+            "tool": "Gosec",
+            "type": "G104",
+            "severity": "LOW",
+            "description": "Errors unhandled",
+            "location": "Line: 101"
+        },
+        {
+            "tool": "Gosec",
+            "type": "G104",
+            "severity": "LOW",
+            "description": "Errors unhandled",
+            "location": "Line: 98"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/RichQuery",
+            "severity": "MEDIUM",
+            "description": "Rich-query / Range-query возвращают разные результаты на разных пирах в зависимости от состояния БД — потенциальный недетерминизм при записи на основе результата",
+            "location": "Line: 209"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод CreateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 77"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод UpdateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 142"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод DeleteAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 185"
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Fabric-CCKit",
+            "description": "Timeout",
+            "status": "PASS",
+            "evidence": "Завершено по таймауту без краша."
+        },
+        {
+            "tool": "Fabric-Fuzzing/Seed",
+            "description": "Timeout",
+            "status": "PASS",
+            "evidence": "Завершено по таймауту без краша."
+        },
+        {
+            "tool": "Fabric-Fuzzing",
+            "description": "Timeout",
+            "status": "PASS",
+            "evidence": "Завершено по таймауту без краша."
+        }
+    ],
+    "summary": {
+        "critical": 0,
+        "high": 3,
+        "medium": 1,
+        "low": 4
+    }
+}

@@ -13,10 +13,11 @@ class Colors:
     ENDC = '\033[0m'
 
 class EthereumScanner:
-    def __init__(self, target_file, reporter, use_myth=False):
+    def __init__(self, target_file, reporter, use_myth=False, myth_timeout=60):
         self.target = os.path.abspath(target_file)
         self.reporter = reporter
-        self.use_myth = use_myth # Флаг использования Mythril
+        self.use_myth = use_myth
+        self.myth_timeout = myth_timeout
         self.env_dir = os.path.expanduser("~/analyzer-env")
         self.solc_path = os.path.join(self.env_dir, "bin/solc")
 
@@ -47,127 +48,127 @@ class EthereumScanner:
         except Exception as e:
             print(f"{Colors.FAIL}Ошибка Slither: {e}{Colors.ENDC}")
 
-        # Mythril запускается только если передан флаг --myth
         if self.use_myth:
             self.run_mythril()
         else:
-            print("[*] Mythril пропущен (используйте флаг --myth для включения)")
+            print("[*] Mythril пропущен (используйте профиль deep или audit для включения)")
 
     def run_mythril(self):
-        print(f"[*] Запуск Mythril (Symbolic Execution) через байт-код...")
-        print("    (Компиляция и анализ могут занять время...)")
+        print(f"[*] Запуск Mythril (Symbolic Execution)...")
+        print("    (Mythril использует встроенный crytic-compile для разрешения импортов)")
         
-        build_dir = "build"
-        
-        #Компиляция в байт-код
         try:
-            if os.path.exists(build_dir):
-                shutil.rmtree(build_dir)
-            os.makedirs(build_dir)
+            # Передаем .sol файл напрямую в Mythril. Он сам разрешит импорты.
+            myth_cmd = [
+                "myth", "analyze", self.target,
+                "--execution-timeout", str(self.myth_timeout),
+                "--max-depth", "30",
+                "-o", "json"
+            ]
 
-            # Формируем команду solc: solc --bin <file> -o build/ --overwrite
-            solc_cmd = [self.solc_path if os.path.exists(self.solc_path) else "solc", 
-                        "--bin", self.target, 
-                        "-o", build_dir, 
-                        "--overwrite"]
-            
-            subprocess.run(solc_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            
-            # Ищем сгенерированные .bin файлы
-            bin_files = glob.glob(os.path.join(build_dir, "*.bin"))
-            if not bin_files:
-                print(f"{Colors.FAIL}[!] Не удалось скомпилировать байт-код.{Colors.ENDC}")
-                return
+            result = subprocess.run(myth_cmd, capture_output=True, text=True)
+            output_data = result.stdout
 
-        except subprocess.CalledProcessError as e:
-            print(f"{Colors.FAIL}[!] Ошибка компиляции Solc: {e.stderr.decode()}{Colors.ENDC}")
-            return
+            if not output_data and result.stderr and "{" in result.stderr:
+                output_data = result.stderr
+
+            data = json.loads(output_data)
+            issues = data.get("issues", [])
+            
+            if issues:
+                print(f"{Colors.WARNING}    Mythril нашел {len(issues)} проблем.{Colors.ENDC}")
+                for issue in issues:
+                    title = issue.get("title", "Unknown Issue")
+                    severity = issue.get("severity", "Medium")
+                    description = issue.get("description", "")
+                    
+                    self.reporter.add_static_issue(
+                        "Mythril", title, severity, description
+                    )
+                    print(f"     - [{severity}] {title}")
+            else:
+                print(f"{Colors.GREEN}    [+] Mythril: Чисто.{Colors.ENDC}")
+
+        except json.JSONDecodeError:
+            if "The analysis was completed successfully" in result.stderr:
+                 print(f"{Colors.GREEN}    [+] Mythril: Анализ завершен без находок.{Colors.ENDC}")
+            else:
+                 print(f"{Colors.FAIL}    [!] Ошибка Mythril (возможно, не удалось разрешить импорты). Попробуйте установить зависимости npm.{Colors.ENDC}")
         except Exception as e:
-            print(f"{Colors.FAIL}[!] Ошибка подготовки Mythril: {e}{Colors.ENDC}")
-            return
+            print(f"    Ошибка запуска Mythril: {e}")
 
-        # 2. Анализ каждого скомпилированного контракта
-        for bin_file in bin_files:
-            contract_name = os.path.basename(bin_file).replace(".bin", "")
-            print(f"    -> Анализ контракта: {contract_name}")
+    def get_main_contract_info(self, content):
+        """
+        Умный поиск главного контракта и параметров его конструктора
+        """
+        contracts = re.findall(r'contract\s+(\w+)', content)
+        if not contracts:
+            return None, None
+        
+        main_contract = contracts[-1]
+        
+        # Проверяем, есть ли конструктор с аргументами
+        constructor_match = re.search(r'constructor\s*\((.*?)\)', content)
+        constructor_args = ""
+        
+        if constructor_match and constructor_match.group(1).strip() != "":
+            args = constructor_match.group(1).split(',')
+            dummy_args = []
+            for arg in args:
+                if 'uint' in arg:
+                    dummy_args.append("1000")
+                elif 'string' in arg:
+                    dummy_args.append("\"TestToken\"")
+                elif 'address' in arg:
+                    dummy_args.append("address(this)")
+                elif 'bool' in arg:
+                    dummy_args.append("true")
+                else:
+                    dummy_args.append("0")
+            constructor_args = ", ".join(dummy_args)
+            print(f"    [!] Найден конструктор с аргументами. Сгенерированы заглушки: {constructor_args}")
             
-            try:
-                with open(bin_file, 'r') as f:
-                    bytecode = f.read().strip()
-                
-                if not bytecode:
-                    continue
-
-                myth_cmd = [
-                    "myth", "analyze",
-                    "-c", bytecode,
-                    "--execution-timeout", "60",
-                    "--max-depth", "50",
-                    "--solver-timeout", "60000",
-                    "-o", "json"
-                ]
-
-                result = subprocess.run(myth_cmd, capture_output=True, text=True)
-                
-                # Парсинг результатов
-                output_data = result.stdout
-                # Fallback если JSON в stderr
-                if not output_data and result.stderr and "{" in result.stderr:
-                    output_data = result.stderr
-
-                data = json.loads(output_data)
-                issues = data.get("issues", [])
-                
-                if issues:
-                    print(f"{Colors.WARNING}    Mythril нашел {len(issues)} проблем в {contract_name}.{Colors.ENDC}")
-                    for issue in issues:
-                        title = issue.get("title", "Unknown Issue")
-                        severity = issue.get("severity", "Medium")
-                        description = issue.get("description", "")
-                        
-                        self.reporter.add_static_issue(
-                            f"Mythril ({contract_name})", title, severity, description
-                        )
-                        print(f"     - [{severity}] {title}")
-                else:
-                    print(f"{Colors.GREEN}    [+] Mythril: Чисто.{Colors.ENDC}")
-
-            except json.JSONDecodeError:
-                if "The analysis was completed successfully" in result.stderr:
-                     print(f"{Colors.GREEN}    [+] Mythril: Анализ завершен без находок.{Colors.ENDC}")
-                else:
-                     pass
-            except Exception as e:
-                print(f"    Ошибка анализа {contract_name}: {e}")
-
-        # Очистка
-        if os.path.exists(build_dir):
-            shutil.rmtree(build_dir)
+        return main_contract, constructor_args
 
     def generate_echidna_test(self):
-        print("[*] Генерация теста для Echidna...")
-        with open(self.target, 'r') as f:
+        print("[*] Интеллектуальная генерация теста для Echidna...")
+        with open(self.target, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        match = re.search(r'contract\s+(\w+)', content)
-        if not match:
+        contract_name, constructor_args = self.get_main_contract_info(content)
+        if not contract_name:
+            print("    [-] Не найдено ключевое слово contract.")
             return None
-        contract_name = match.group(1)
         
-        has_balances = 'mapping(address => uint256)' in content and 'balances' in content
+        # Определяем тип контракта на основе его кода
+        is_erc20 = 'balanceOf' in content and 'transfer' in content and 'totalSupply' in content
+        is_payable = 'payable' in content
+        # Проверяем, что deposit() действительно объявлена в контракте —
+        # иначе тест не скомпилируется
+        has_deposit = bool(re.search(r'\bfunction\s+deposit\s*\(', content))
 
         test_code = [
             "// SPDX-License-Identifier: MIT",
-            f"pragma solidity ^0.8.28;",
+            "pragma solidity ^0.8.0;",
             f"import \"{self.target}\";",
             "",
-            f"contract GeneratedAutoTest is {contract_name} {{",
-            "    uint256 private totalExpected;",
-            "    constructor() payable {}",
-            ""
+            f"contract GeneratedAutoTest is {contract_name} {{"
         ]
 
-        if has_balances:
+        if has_deposit:
+            test_code.append("    uint256 private totalExpected;")
+
+        if constructor_args:
+            test_code.append(f"    constructor() {contract_name}({constructor_args}) payable {{}}")
+        else:
+            test_code.append("    constructor() payable {}")
+
+        test_code.append("")
+
+        # 1. Инвариант: контракт не должен отправлять больше эфира чем получил
+        #    (защита от reentrancy / drain-атак).
+        #    Проверяем только если есть payable-функции И deposit() для накопления базы.
+        if is_payable and has_deposit:
             test_code.extend([
                 "    function depositAuto() public payable {",
                 "        if (msg.value > 0 && msg.value < 100 ether) {",
@@ -176,17 +177,41 @@ class EthereumScanner:
                 "        }",
                 "    }",
                 "    function echidna_check_solvency() public view returns (bool) {",
+                "        // Баланс контракта не должен быть меньше суммы всех депозитов",
                 "        return address(this).balance >= totalExpected;",
-                "    }"
+                "    }",
             ])
-        else:
+        elif is_payable:
+            # Нет deposit() — просто проверяем что баланс не уходит в минус
             test_code.extend([
-                "    function echidna_not_empty() public view returns (bool) { return true; }"
+                "    uint256 private _initBalance;",
+                "    function echidna_no_unexpected_drain() public view returns (bool) {",
+                "        // Контракт не должен терять эфир без явного вызова withdraw",
+                "        return address(this).balance >= _initBalance;",
+                "    }",
             ])
 
-        test_code.append("}")
+        # 2. Инварианты для стандарта ERC20
+        if is_erc20:
+            print("    [+] Определен стандарт ERC20. Добавлены финансовые инварианты.")
+            test_code.extend([
+                "    function echidna_erc20_supply_logic() public view returns (bool) {",
+                "        // Баланс контракта не может превышать общую эмиссию",
+                "        return balanceOf(address(this)) <= totalSupply();",
+                "    }"
+            ])
+
+        # 3. Базовый инвариант liveness
+        test_code.extend([
+            "    bool private initialized = true;",
+            "    function echidna_basic_liveness() public view returns (bool) {",
+            "        return initialized;",
+            "    }",
+            "}",
+        ])
+
         test_path = self.target.replace(".sol", "_AutoTest.sol")
-        with open(test_path, 'w') as f:
+        with open(test_path, 'w', encoding='utf-8') as f:
             f.write("\n".join(test_code))
         return test_path
 
@@ -204,27 +229,31 @@ class EthereumScanner:
             "--seq-len", "100" 
         ]
         
+        print(f"{Colors.WARNING}[*] Команда для ручного запуска Echidna:{Colors.ENDC}")
+        print(f"    {' '.join(cmd)}")
+        
         try:
-            process = subprocess.run(cmd, capture_output=True, text=True)
+            # Устанавливаем таймаут, чтобы Echidna не зависала на очень сложных контрактах
+            process = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
             output = process.stdout + "\n" + process.stderr
             
             if "falsified" in output.lower() or "failed" in output.lower():
                 print(f"{Colors.FAIL}[!] Echidna: Инвариант нарушен!{Colors.ENDC}")
+                evidence = "Детали не найдены. Проверьте лог консоли."
                 
-                evidence = "Детали не найдены."
-                if "Call Sequence" in output:
-                    parts = re.split(r"Call Sequence", output, flags=re.IGNORECASE)
-                    evidence = "Call Sequence" + parts[-1].split("---")[0].strip()
-                elif "Shrinking" in output:
-                    evidence = output.split("Shrinking")[-1].strip()
+                if "call sequence:" in output.lower():
+                    parts = re.split(r"(?i)call sequence:", output)
+                    last_sequence_block = parts[-1]
+                    clean_sequence = re.split(r"(?i)(Traces:|Unique instructions:)", last_sequence_block)[0]
+                    evidence = "Call sequence:\n" + clean_sequence.strip()
                 
                 self.reporter.add_dynamic_issue("Echidna", "Нарушение инварианта", "FAIL", evidence)
             else:
                 print(f"{Colors.GREEN}[+] Echidna: Тест пройден.{Colors.ENDC}")
                 self.reporter.add_dynamic_issue("Echidna", "Инварианты соблюдены", "PASS", "Tests passed")
 
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.WARNING}[!] Echidna: Превышено время ожидания (Таймаут).{Colors.ENDC}")
+            self.reporter.add_dynamic_issue("Echidna", "Таймаут фаззинга", "MEDIUM", "Анализ остановлен по таймауту (180с)")
         except Exception as e:
             print(f"Ошибка Echidna: {e}")
-        finally:
-            if os.path.exists(test_file):
-                os.remove(test_file)

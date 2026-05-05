@@ -1,0 +1,82 @@
+{
+    "timestamp": "2026-05-05 07:35:51",
+    "platform": "Hyperledger Fabric",
+    "target_file": "/vagrant/contracts/fabric/VulnerableFabric.go",
+    "static_analysis": [
+        {
+            "tool": "Gosec",
+            "type": "G404",
+            "severity": "HIGH",
+            "description": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+            "location": "Line: 29"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/TimeNow",
+            "severity": "HIGH",
+            "description": "Использование time.Now() нарушает детерминизм. Используйте stub.GetTxTimestamp()",
+            "location": "Line: 28"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/MathRand",
+            "severity": "CRITICAL",
+            "description": "Использование math/rand нарушает консенсус между пирами (недетерминизм)",
+            "location": "Line: 28"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/MathRand",
+            "severity": "CRITICAL",
+            "description": "Использование math/rand нарушает консенсус между пирами (недетерминизм)",
+            "location": "Line: 29"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод CreateRiskyAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 25"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не присваивается переменной — ошибка записи будет проигнорирована",
+            "location": "Line: 41"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не присваивается переменной — ошибка записи будет проигнорирована",
+            "location": "Line: 47"
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Fabric-CCKit",
+            "description": "Обнаружена уязвимость",
+            "status": "FAIL",
+            "evidence": "    smartscan_cckit_test.go:26: ACCESS CONTROL FAIL: CreateRiskyAsset выполнился без авторизации (статус 200). Любой участник сети может вызвать этот метод.\n--- FAIL: TestCCKit_AccessControl (0.00s)\nFAIL\nFAIL\tsmartscan/sandbox\t0.017s"
+        },
+        {
+            "tool": "Fabric-Fuzzing/Seed",
+            "description": "Успешно завершено",
+            "status": "PASS",
+            "evidence": "No issues detected."
+        },
+        {
+            "tool": "Fabric-Fuzzing",
+            "description": "Успешно завершено",
+            "status": "PASS",
+            "evidence": "No issues detected."
+        }
+    ],
+    "summary": {
+        "critical": 2,
+        "high": 5,
+        "medium": 0,
+        "low": 0
+    }
+}

@@ -1,0 +1,61 @@
+{
+    "timestamp": "2026-05-05 07:39:21",
+    "platform": "Hyperledger Fabric",
+    "target_file": "/vagrant/contracts/fabric/PanicFabric.go",
+    "static_analysis": [
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод CreateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 27"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод SetTag изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: 71"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не присваивается переменной — ошибка записи будет проигнорирована",
+            "location": "Line: 94"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не присваивается переменной — ошибка записи будет проигнорирована",
+            "location": "Line: 108"
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Fabric-CCKit",
+            "description": "Обнаружена уязвимость",
+            "status": "FAIL",
+            "evidence": "--- FAIL: TestCCKit_ReadStability (0.00s)\nFAIL\tsmartscan/sandbox\t0.023s"
+        },
+        {
+            "tool": "Fabric-Fuzzing/Seed",
+            "description": "Обнаружена уязвимость",
+            "status": "FAIL",
+            "evidence": "    smartscan_fuzz_test.go:36: ПАНИКА/КРИТИЧЕСКАЯ ОШИБКА: метод=\"CreateAsset\" arg1=\"seed_arg_0\" arg2=\"seed_arg2_0\": invalid value: seed_arg2_0\n--- FAIL: FuzzChaincodeInputs (0.00s)\n    --- FAIL: FuzzChaincodeInputs/seed#0 (0.00s)\n    --- FAIL: FuzzChaincodeInputs/seed#1 (0.00s)\nFAIL\tsmartscan/sandbox\t0.028s"
+        },
+        {
+            "tool": "Fabric-Fuzzing",
+            "description": "Обнаружена уязвимость",
+            "status": "FAIL",
+            "evidence": "--- FAIL: FuzzChaincodeInputs (0.04s)\n    --- FAIL: FuzzChaincodeInputs (0.00s)\n        smartscan_fuzz_test.go:36: ПАНИКА/КРИТИЧЕСКАЯ ОШИБКА: метод=\"CreateAsset\" arg1=\"seed_arg_0\" arg2=\"seed_arg2_0\": invalid value: seed_arg2_0\nFAIL\nFAIL\tsmartscan/sandbox\t0.056s"
+        }
+    ],
+    "summary": {
+        "critical": 0,
+        "high": 4,
+        "medium": 0,
+        "low": 0
+    }
+}

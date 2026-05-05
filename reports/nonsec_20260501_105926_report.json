@@ -1,0 +1,83 @@
+{
+    "timestamp": "2026-05-01 10:59:25",
+    "platform": "Hyperledger Fabric",
+    "target_file": "/vagrant/contracts/fabric/nonsec.go",
+    "static_analysis": [
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/TimeNow",
+            "severity": "HIGH",
+            "description": "Использование time.Now() нарушает детерминизм. Используйте stub.GetTxTimestamp()",
+            "location": "Line: 25"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/MathRand",
+            "severity": "CRITICAL",
+            "description": "Использование math/rand нарушает консенсус между пирами (недетерминизм)",
+            "location": "Line: 25"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "NonDeterminism/MathRand",
+            "severity": "CRITICAL",
+            "description": "Использование math/rand нарушает консенсус между пирами (недетерминизм)",
+            "location": "Line: 26"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не проверяется — скрытая ошибка записи (G104)",
+            "location": "Line: 33"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не проверяется — скрытая ошибка записи (G104)",
+            "location": "Line: 51"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод CreateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: N/A"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "AccessControl/MissingCheck",
+            "severity": "HIGH",
+            "description": "Метод UpdateAsset изменяет состояние реестра, но не проверяет идентичность вызывающей стороны (GetCreator / cid.GetMSPID). Любой участник сети может выполнить эту операцию.",
+            "location": "Line: N/A"
+        },
+        {
+            "tool": "ChaincodeAnalyzer",
+            "type": "ErrorHandling/IgnoredPutState",
+            "severity": "HIGH",
+            "description": "Результат PutState не присваивается переменной — ошибка записи будет проигнорирована",
+            "location": "Line: 51"
+        }
+    ],
+    "dynamic_analysis": [
+        {
+            "tool": "Fabric-CCKit",
+            "description": "Ошибка компиляции теста",
+            "status": "ERROR",
+            "evidence": "FAIL\tsmartscan/sandbox [build failed]\n\n# smartscan/sandbox [smartscan/sandbox.test]\n./nonsec.go:17:16: syntax error: unexpected json in struct type; possibly missing semicolon or newline or }\n"
+        },
+        {
+            "tool": "Fabric-Fuzzing/Seed",
+            "description": "Ошибка компиляции теста",
+            "status": "ERROR",
+            "evidence": "FAIL\tsmartscan/sandbox [build failed]\n\n# smartscan/sandbox [smartscan/sandbox.test]\n./nonsec.go:17:16: syntax error: unexpected json in struct type; possibly missing semicolon or newline or }\n"
+        }
+    ],
+    "summary": {
+        "critical": 2,
+        "high": 6,
+        "medium": 0,
+        "low": 0
+    }
+}
